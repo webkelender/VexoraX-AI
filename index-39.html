@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VexoraX — Personal Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #ffffff;
+    --bg-raised: transparent;
+    --bg-inset: transparent;
+    --line: rgba(221, 217, 208, 0.7);
+    --text: #201f1c;
+    --text-dim: #6b6862;
+    --brass: #b5762e;
+    --brass-soft: #b5762e22;
+    --sage: #4f7356;
+    --danger: #a2503b;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #particleBg{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    opacity:0.4;
+    overflow:hidden;
+  }
+  #particleBg canvas{
+    display:block;
+  }
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:1100px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+  header.top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header.top h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:28px;
+    letter-spacing:-0.01em;
+  }
+  header.top .date{
+    color:var(--text-dim);
+    font-size:14px;
+  }
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    background:var(--bg-inset);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:4px;
+    margin-bottom:24px;
+    width:fit-content;
+  }
+  nav.tabs button{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-family:'Inter';
+    font-size:14px;
+    font-weight:500;
+    padding:8px 16px;
+    border-radius:7px;
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s;
+  }
+  nav.tabs button.active{
+    background:var(--brass);
+    color:#14161c;
+  }
+  nav.tabs button:not(.active):hover{
+    color:var(--text);
+  }
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* ---- Tasks ---- */
+  .task-input-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+  .task-input-row input[type=text]{
+    flex:1;
+    min-width:180px;
+    background:var(--bg-raised);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:11px 14px;
+    border-radius:var(--radius);
+    font-size:14px;
+    font-family:'Inter';
+  }
+  .task-input-row select, .task-input-row input[type=date]{
+    background:var(--bg-raised);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    padding:11px 10px;
+    border-radius:var(--radius);
+    font-size:13px;
+    font-family:'Inter';
+  }
+  .task-input-row button{
+    background:var(--brass);
+    color:#14161c;
+    border:none;
+    font-weight:600;
+    font-size:14px;
+    padding:11px 20px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .task-list{list-style:none; display:flex; flex-direction:column; gap:8px;}
+  .task-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--bg-raised);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:13px 14px;
+  }
+  .task-item.done{opacity:0.45;}
+  .task-item.done .task-text{text-decoration:line-through;}
+  .task-check{
+    width:18px; height:18px;
+    border:1.5px solid var(--text-dim);
+    border-radius:5px;
+    cursor:pointer;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .task-item.done .task-check{background:var(--sage); border-color:var(--sage);}
+  .task-text{flex:1; font-size:14.5px;}
+  .task-meta{display:flex; gap:8px; align-items:center; flex-shrink:0;}
+  .badge{
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:20px;
+    font-weight:600;
+  }
+  .badge.high{background:#b5654f2e; color:#e08b74;}
+  .badge.med{background:#c98a3e2e; color:var(--brass);}
+  .badge.low{background:#6b8f712e; color:var(--sage);}
+  .badge.due{background:transparent; border:1px solid var(--line); color:var(--text-dim);}
+  .task-del{
+    background:none; border:none; color:var(--text-dim);
+    cursor:pointer; font-size:16px; padding:2px 6px;
+  }
+  .task-del:hover{color:var(--danger);}
+  .empty-state{
+    color:var(--text-dim);
+    text-align:center;
+    padding:40px 20px;
+    font-size:14px;
+  }
+
+  /* ---- Drafter ---- */
+  .drafter-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media(max-width:760px){ .drafter-grid{grid-template-columns:1fr;} }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+    font-weight:500;
+  }
+  .field textarea, .field input[type=text], .field select{
+    width:100%;
+    background:var(--bg-raised);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:11px 13px;
+    border-radius:var(--radius);
+    font-size:14px;
+    font-family:'Inter';
+    resize:vertical;
+  }
+  .field textarea{min-height:80px; line-height:1.5;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .btn-primary{
+    background:var(--brass);
+    color:#14161c;
+    border:none;
+    font-weight:600;
+    font-size:14.5px;
+    padding:12px 22px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    width:100%;
+  }
+  .btn-primary:disabled{opacity:0.5; cursor:wait;}
+  .output-box{
+    background:var(--bg-inset);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    min-height:200px;
+  }
+  .output-box textarea{
+    width:100%;
+    min-height:220px;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    font-family:'Inter';
+    font-size:14.5px;
+    line-height:1.6;
+    resize:vertical;
+  }
+  .output-box textarea:focus{outline:none;}
+  .output-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .btn-ghost{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    padding:8px 14px;
+    border-radius:var(--radius);
+    font-size:13px;
+    cursor:pointer;
+  }
+  .btn-ghost:hover{color:var(--text); border-color:var(--text-dim);}
+  .placeholder-hint{color:var(--text-dim); font-size:13.5px; line-height:1.6;}
+
+  /* ---- Voice ---- */
+  .voice-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    padding:40px 20px;
+    max-width:480px;
+    margin:0 auto;
+  }
+  .mic-btn{
+    width:88px;
+    height:88px;
+    border-radius:50%;
+    background:var(--brass);
+    color:#fff;
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:0 0 0 0 var(--brass-soft);
+    transition:transform 0.15s;
+  }
+  .mic-btn:hover{ transform:scale(1.04); }
+  .mic-btn.listening{
+    background:var(--danger);
+    animation:pulse 1.4s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(162,80,59,0.45); }
+    70%{ box-shadow:0 0 0 22px rgba(162,80,59,0); }
+    100%{ box-shadow:0 0 0 0 rgba(162,80,59,0); }
+  }
+  .voice-status{
+    margin-top:18px;
+    font-size:15px;
+    font-weight:500;
+  }
+  .voice-hint{
+    margin-top:8px;
+    font-size:13px;
+    color:var(--text-dim);
+    line-height:1.6;
+  }
+  .voice-transcript{
+    margin-top:24px;
+    padding:14px 16px;
+    background:var(--bg-raised);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    font-size:14px;
+    font-style:italic;
+    color:var(--text-dim);
+    width:100%;
+  }
+  .voice-response{
+    margin-top:12px;
+    padding:14px 16px;
+    background:var(--bg-inset);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    font-size:14.5px;
+    width:100%;
+    text-align:left;
+  }
+
+  /* ---- Settings ---- */
+  .settings-box{max-width:460px;}
+  .settings-box .field input{width:100%;}
+  .api-key-row{display:flex; gap:8px;}
+  .api-key-row input{flex:1;}
+  .api-key-row .btn-ghost{flex-shrink:0;}
+  .hint{font-size:12.5px; color:var(--text-dim); margin-top:6px; line-height:1.5;}
+  .status-ok{color:var(--sage); font-size:13px; margin-top:8px;}
+</style>
+</head>
+<body>
+<div id="particleBg"></div>
+<div class="wrap">
+  <header class="top">
+    <h1>VexoraX</h1>
+    <span class="date" id="todayDate"></span>
+  </header>
+
+  <nav class="tabs">
+    <button class="active" data-panel="tasks">Tasks</button>
+    <button data-panel="drafter">Draft a message</button>
+    <button data-panel="voice">Voice</button>
+    <button data-panel="settings">Settings</button>
+  </nav>
+
+  <!-- TASKS -->
+  <section class="panel active" id="panel-tasks">
+    <div class="task-input-row">
+      <input type="text" id="taskInput" placeholder="What needs doing?" enterkeyhint="done">
+      <select id="taskPriority" aria-label="Priority">
+        <option value="med">Medium</option>
+        <option value="high">High</option>
+        <option value="low">Low</option>
+      </select>
+      <input type="date" id="taskDue" aria-label="Due date">
+      <button onclick="addTask()">Add</button>
+    </div>
+    <ul class="task-list" id="taskList"></ul>
+  </section>
+
+  <!-- DRAFTER -->
+  <section class="panel" id="panel-drafter">
+    <div class="drafter-grid">
+      <div>
+        <div class="field">
+          <label for="draftRecipient">Who's this for?</label>
+          <input type="text" id="draftRecipient" placeholder="e.g. Dhanvantari Clinic, a client asking about pricing">
+        </div>
+        <div class="field">
+          <label for="draftContext">What do you want to say? (rough notes are fine)</label>
+          <textarea id="draftContext" placeholder="e.g. tell them the site will be 2 days late because I'm fixing a mobile bug, apologize but keep it brief"></textarea>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="draftTone">Tone</label>
+            <select id="draftTone">
+              <option>Casual & friendly</option>
+              <option>Professional</option>
+              <option>Firm</option>
+              <option>Apologetic</option>
+              <option>Enthusiastic</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="draftChannel">Channel</label>
+            <select id="draftChannel">
+              <option>WhatsApp</option>
+              <option>Email</option>
+              <option>General message</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" id="draftBtn" onclick="generateDraft()">Draft it</button>
+      </div>
+      <div>
+        <div class="output-box" id="outputBox">
+          <div class="placeholder-hint" id="outputPlaceholder">Your drafted message will show up here, ready to edit and copy.</div>
+          <textarea id="outputText" style="display:none;"></textarea>
+        </div>
+        <div class="output-actions" id="outputActions" style="display:none;">
+          <button class="btn-ghost" onclick="copyDraft()">Copy</button>
+          <button class="btn-ghost" onclick="generateDraft()">Regenerate</button>
+          <button class="btn-ghost" onclick="sendViaWhatsApp()">Send via WhatsApp</button>
+          <button class="btn-ghost" onclick="sendViaEmail()">Send via Email</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VOICE -->
+  <section class="panel" id="panel-voice">
+    <div class="voice-wrap">
+      <button class="mic-btn" id="micBtn" onclick="toggleListening()" aria-label="Toggle voice command listening">
+        <svg id="micIcon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+      <p class="voice-status" id="voiceStatus" aria-live="polite">Tap to speak a command</p>
+      <p class="voice-hint">Try: "Add a task to call the clinic tomorrow, high priority" or "Draft a WhatsApp message to a client saying the site's ready for review"</p>
+      <div class="voice-transcript" id="voiceTranscript" style="display:none;" aria-live="polite"></div>
+      <div class="voice-response" id="voiceResponse" style="display:none;" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="panel-settings">
+    <div class="settings-box">
+      <div class="field">
+        <label for="providerSelect">AI provider</label>
+        <select id="providerSelect" onchange="onProviderChange()">
+          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect"></select>
+      </div>
+      <div class="field">
+        <label id="apiKeyLabel" for="apiKey">API key</label>
+        <div class="api-key-row">
+          <input type="password" id="apiKey" placeholder="Paste your API key" autocomplete="off">
+          <button type="button" class="btn-ghost" id="apiKeyToggle" onclick="toggleApiKeyVisibility()">Show</button>
+        </div>
+        <p class="hint" id="apiKeyHint">Stored only in this browser's local storage — never sent anywhere except directly to the provider's API.</p>
+      </div>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+      <div class="status-ok" id="saveStatus" style="display:none;" aria-live="polite">Saved.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ---------- Tab switching ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
+  });
+});
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+
+// ---------- AI providers ----------
+// NOTE: model IDs below are current as of writing, but both providers retire
+// and rename models every few months. If callAI() starts erroring with a
+// "model not found" style message, check the provider's docs and update the
+// values (not just labels) here — that's the actual model sent to the API.
+const AI_PROVIDERS = {
+  gemini: {
+    label: 'Google Gemini',
+    keyHint: 'Get a key at aistudio.google.com/apikey. Since this file has no backend, don\'t share it publicly with your key saved in it.',
+    models: [
+      { value: 'gemini-3.5-flash', label: 'gemini-3.5-flash (newest, default)' },
+      { value: 'gemini-3.1-flash-lite', label: 'gemini-3.1-flash-lite (fastest/cheapest)' },
+      { value: 'gemini-3.1-pro-preview', label: 'gemini-3.1-pro-preview (most capable)' }
+    ],
+    defaultModel: 'gemini-3.5-flash'
+  },
+  openai: {
+    label: 'OpenAI',
+    keyHint: 'Get a key at platform.openai.com/api-keys. Since this file has no backend, don\'t share it publicly with your key saved in it. Note: OpenAI\'s API does not allow direct browser requests (no CORS support), so this provider will not work from a static page like this one — Gemini is the working option here.',
+    models: [
+      { value: 'gpt-5.4-mini', label: 'gpt-5.4-mini (fast, default)' },
+      { value: 'gpt-5.4', label: 'gpt-5.4 (flagship)' },
+      { value: 'gpt-5.2', label: 'gpt-5.2' }
+    ],
+    defaultModel: 'gpt-5.4-mini'
+  }
+};
+
+function getProvider(){
+  return localStorage.getItem('desk_provider') || 'gemini';
+}
+function getApiKey(provider){
+  return localStorage.getItem(`desk_${provider}_key`) || '';
+}
+function getModel(provider){
+  return localStorage.getItem(`desk_${provider}_model`) || AI_PROVIDERS[provider].defaultModel;
+}
+function hasApiKey(){
+  return !!getApiKey(getProvider());
+}
+
+function onProviderChange(){
+  const provider = document.getElementById('providerSelect').value;
+  document.getElementById('apiKeyLabel').textContent = AI_PROVIDERS[provider].label + ' API key';
+  document.getElementById('apiKeyHint').textContent = 'Stored only in this browser\'s local storage — never sent anywhere except directly to the provider\'s API. ' + AI_PROVIDERS[provider].keyHint;
+  document.getElementById('apiKey').value = getApiKey(provider);
+
+  const savedModel = getModel(provider);
+  const modelSelect = document.getElementById('modelSelect');
+  modelSelect.innerHTML = AI_PROVIDERS[provider].models
+    .map(m => `<option value="${m.value}"${m.value === savedModel ? ' selected' : ''}>${m.label}</option>`)
+    .join('');
+}
+
+function toggleApiKeyVisibility(){
+  const input = document.getElementById('apiKey');
+  const btn = document.getElementById('apiKeyToggle');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? 'Show' : 'Hide';
+}
+
+function loadSettings(){
+  const provider = getProvider();
+  document.getElementById('providerSelect').value = provider;
+  onProviderChange();
+}
+function saveSettings(){
+  const provider = document.getElementById('providerSelect').value;
+  localStorage.setItem('desk_provider', provider);
+  localStorage.setItem(`desk_${provider}_key`, document.getElementById('apiKey').value.trim());
+  localStorage.setItem(`desk_${provider}_model`, document.getElementById('modelSelect').value);
+  const status = document.getElementById('saveStatus');
+  status.style.display = 'block';
+  setTimeout(()=> status.style.display='none', 2000);
+}
+loadSettings();
+
+// Shared call to whichever AI provider is active. Returns plain text.
+async function callAI(prompt){
+  const provider = getProvider();
+  const apiKey = getApiKey(provider);
+  const model = getModel(provider);
+  if(!apiKey) throw new Error('No API key set for ' + AI_PROVIDERS[provider].label + '. Add one in Settings.');
+
+  try{
+    if(provider === 'gemini'){
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok || data.error) throw new Error(data.error?.message || `Gemini API error (HTTP ${res.status})`);
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    }
+
+    if(provider === 'openai'){
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok || data.error) throw new Error(data.error?.message || `OpenAI API error (HTTP ${res.status})`);
+      return data.choices?.[0]?.message?.content?.trim() || '';
+    }
+
+    throw new Error('Unknown provider: ' + provider);
+  }catch(err){
+    // A network-level failure (as opposed to an API error response) surfaces
+    // as a generic TypeError from fetch — this is what CORS blocks look like.
+    if(err instanceof TypeError){
+      if(provider === 'openai'){
+        throw new Error("Couldn't reach OpenAI. Its API doesn't allow direct requests from a browser page (no CORS support), so this provider can't work from a static file like this one — switch to Gemini in Settings, or route requests through your own backend.");
+      }
+      throw new Error('Network error — check your connection and try again.');
+    }
+    throw err;
+  }
+}
+
+// ---------- Tasks ----------
+function loadTasks(){
+  return JSON.parse(localStorage.getItem('desk_tasks') || '[]');
+}
+function saveTasks(tasks){
+  localStorage.setItem('desk_tasks', JSON.stringify(tasks));
+}
+function renderTasks(){
+  const tasks = loadTasks();
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  if(tasks.length === 0){
+    list.innerHTML = '<div class="empty-state">Nothing on your list. Add something above.</div>';
+    return;
+  }
+  // sort: undone first, then by priority, then by due date
+  const priorityRank = {high:0, med:1, low:2};
+  tasks.sort((a,b)=>{
+    if(a.done !== b.done) return a.done ? 1 : -1;
+    if(priorityRank[a.priority] !== priorityRank[b.priority]) return priorityRank[a.priority]-priorityRank[b.priority];
+    return (a.due||'9999').localeCompare(b.due||'9999');
+  });
+  tasks.forEach(t=>{
+    const li = document.createElement('li');
+    li.className = 'task-item' + (t.done ? ' done' : '');
+    const dueLabel = t.due ? new Date(t.due+'T00:00').toLocaleDateString('en-US',{month:'short', day:'numeric'}) : '';
+    li.innerHTML = `
+      <div class="task-check" onclick="toggleTask('${t.id}')">${t.done ? '✓' : ''}</div>
+      <div class="task-text">${escapeHtml(t.text)}</div>
+      <div class="task-meta">
+        <span class="badge ${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span>
+        ${dueLabel ? `<span class="badge due">${dueLabel}</span>` : ''}
+        <button class="task-del" onclick="deleteTask('${t.id}')">✕</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+const VALID_PRIORITIES = ['high', 'med', 'low'];
+function sanitizePriority(priority){
+  return VALID_PRIORITIES.includes(priority) ? priority : 'med';
+}
+function sanitizeDue(due){
+  return /^\d{4}-\d{2}-\d{2}$/.test(due || '') ? due : '';
+}
+function addTaskDirect(text, priority, due){
+  if(!text) return;
+  const tasks = loadTasks();
+  tasks.push({
+    id: Date.now().toString(),
+    text,
+    priority: sanitizePriority(priority),
+    due: sanitizeDue(due),
+    done: false
+  });
+  saveTasks(tasks);
+  renderTasks();
+}
+function addTask(){
+  const input = document.getElementById('taskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  addTaskDirect(text, document.getElementById('taskPriority').value, document.getElementById('taskDue').value);
+  input.value = '';
+  document.getElementById('taskDue').value = '';
+}
+document.getElementById('taskInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') addTask();
+});
+function toggleTask(id){
+  const tasks = loadTasks();
+  const t = tasks.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  saveTasks(tasks);
+  renderTasks();
+}
+function deleteTask(id){
+  saveTasks(loadTasks().filter(t=>t.id!==id));
+  renderTasks();
+}
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+renderTasks();
+
+// ---------- Drafter ----------
+async function generateDraft(){
+  if(!hasApiKey()){
+    alert('Add your API key in Settings first.');
+    return;
+  }
+  const recipient = document.getElementById('draftRecipient').value.trim();
+  const context = document.getElementById('draftContext').value.trim();
+  const tone = document.getElementById('draftTone').value;
+  const channel = document.getElementById('draftChannel').value;
+  if(!context){
+    alert('Add a few notes about what you want to say.');
+    return;
+  }
+  const btn = document.getElementById('draftBtn');
+  btn.disabled = true;
+  btn.textContent = 'Drafting…';
+
+  const prompt = `Write a ${tone.toLowerCase()} ${channel.toLowerCase()} message.
+Recipient/context: ${recipient || 'not specified'}
+What to say: ${context}
+
+Keep it concise and natural-sounding, like a real person wrote it — not corporate or stiff. No subject line unless it's an email. Output only the message text, nothing else.`;
+
+  try{
+    const draft = await callAI(prompt) || 'No response generated.';
+    document.getElementById('outputPlaceholder').style.display = 'none';
+    const out = document.getElementById('outputText');
+    out.style.display = 'block';
+    out.value = draft;
+    document.getElementById('outputActions').style.display = 'flex';
+  }catch(err){
+    alert('Something went wrong: ' + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Draft it';
+  }
+}
+function copyDraft(){
+  const out = document.getElementById('outputText');
+  const actions = document.getElementById('outputActions');
+  const copyBtn = actions.querySelector('.btn-ghost');
+  const original = copyBtn.textContent;
+  const showCopied = ()=>{
+    copyBtn.textContent = 'Copied';
+    setTimeout(()=>{ copyBtn.textContent = original; }, 1500);
+  };
+  const legacyCopy = ()=>{
+    out.select();
+    document.execCommand('copy');
+    showCopied();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(out.value).then(showCopied).catch(legacyCopy);
+  } else {
+    legacyCopy();
+  }
+}
+function sendViaWhatsApp(){
+  const text = document.getElementById('outputText').value.trim();
+  if(!text) return;
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(text), '_blank');
+}
+function sendViaEmail(){
+  const text = document.getElementById('outputText').value.trim();
+  if(!text) return;
+  const recipient = document.getElementById('draftRecipient').value.trim();
+  const subject = recipient ? `Regarding ${recipient}` : 'Message from VexoraX';
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
+}
+
+// ---------- Voice agent ----------
+let recognition = null;
+let isListening = false;
+
+function getSpeechRecognition(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  return SR ? new SR() : null;
+}
+
+function toggleListening(){
+  if(isListening){
+    if(recognition) recognition.stop();
+    return;
+  }
+  const apiKey = hasApiKey();
+  if(!apiKey){
+    alert('Add your API key in Settings first.');
+    return;
+  }
+  if(!window.isSecureContext){
+    alert("Voice input needs the page loaded over https:// or http://localhost to get microphone access — the browser blocks it when a file is opened directly (like from Downloads). Try hosting this file somewhere (e.g. GitHub Pages, Netlify) or serving it from a local server.");
+    return;
+  }
+  recognition = getSpeechRecognition();
+  if(!recognition){
+    alert("Your browser doesn't support voice input. Try Chrome or Edge.");
+    return;
+  }
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  const micBtn = document.getElementById('micBtn');
+  const status = document.getElementById('voiceStatus');
+  const transcriptBox = document.getElementById('voiceTranscript');
+  const responseBox = document.getElementById('voiceResponse');
+  responseBox.style.display = 'none';
+  transcriptBox.style.display = 'none';
+
+  recognition.onstart = ()=>{
+    isListening = true;
+    micBtn.classList.add('listening');
+    status.textContent = 'Listening…';
+  };
+  recognition.onerror = (e)=>{
+    isListening = false;
+    micBtn.classList.remove('listening');
+    status.textContent = 'Tap to speak a command';
+    if(e.error === 'no-speech') return;
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      alert("Microphone access was blocked. Check your browser's site permissions for the mic, and make sure this page is loaded over https:// or http://localhost rather than opened directly as a file.");
+      return;
+    }
+    alert('Voice input error: ' + e.error);
+  };
+  recognition.onend = ()=>{
+    isListening = false;
+    micBtn.classList.remove('listening');
+  };
+  recognition.onresult = async (event)=>{
+    const transcript = event.results[0][0].transcript;
+    transcriptBox.style.display = 'block';
+    transcriptBox.textContent = '"' + transcript + '"';
+    status.textContent = 'Thinking…';
+    await handleVoiceCommand(transcript);
+    status.textContent = 'Tap to speak a command';
+  };
+
+  recognition.start();
+}
+
+async function handleVoiceCommand(transcript){
+  const responseBox = document.getElementById('voiceResponse');
+
+  const today = new Date().toISOString().split('T')[0];
+  const prompt = `You are a command parser for a personal assistant app. Today's date is ${today}.
+The user said: "${transcript}"
+
+Decide if this is a request to (a) add a task, (b) draft a message, or (c) unclear.
+Respond with ONLY raw JSON, no markdown fences, matching exactly one of these shapes:
+
+For a task: {"action":"add_task","text":"...","priority":"high|med|low","due":"YYYY-MM-DD or empty string","reply":"a short spoken confirmation sentence"}
+For a message: {"action":"draft_message","recipient":"...","context":"...","tone":"Casual & friendly|Professional|Firm|Apologetic|Enthusiastic","channel":"WhatsApp|Email|General message","reply":"a short spoken confirmation sentence"}
+For unclear: {"action":"unclear","reply":"a short spoken message asking them to rephrase"}
+
+Infer due dates relative to today's date if mentioned (e.g. "tomorrow", "Friday"). Default priority to "med" if not stated.`;
+
+  try{
+    let raw = await callAI(prompt) || '{}';
+    raw = raw.replace(/```json|```/g, '').trim();
+    let parsed;
+    try{
+      parsed = JSON.parse(raw);
+    }catch(parseErr){
+      throw new Error("Didn't get a clear response back — try rephrasing your command.");
+    }
+
+    if(parsed.action === 'add_task'){
+      addTaskDirect(parsed.text, parsed.priority, parsed.due);
+      responseBox.style.display = 'block';
+      responseBox.textContent = '✓ ' + parsed.reply;
+      speak(parsed.reply);
+    } else if(parsed.action === 'draft_message'){
+      document.getElementById('draftRecipient').value = parsed.recipient || '';
+      document.getElementById('draftContext').value = parsed.context || '';
+      document.getElementById('draftTone').value = parsed.tone || 'Casual & friendly';
+      document.getElementById('draftChannel').value = parsed.channel || 'General message';
+      responseBox.style.display = 'block';
+      responseBox.textContent = '✓ ' + parsed.reply + ' Switching to the drafter…';
+      speak(parsed.reply);
+      setTimeout(()=>{
+        document.querySelector('nav.tabs button[data-panel="drafter"]').click();
+        generateDraft();
+      }, 1200);
+    } else {
+      responseBox.style.display = 'block';
+      responseBox.textContent = parsed.reply || "Didn't catch that clearly — try again.";
+      speak(parsed.reply || "Sorry, I didn't catch that. Could you try again?");
+    }
+  }catch(err){
+    responseBox.style.display = 'block';
+    responseBox.textContent = 'Something went wrong: ' + err.message;
+  }
+}
+
+function speak(text){
+  if(!text || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1.02;
+  window.speechSynthesis.speak(utter);
+}
+
+// ---------- Background particle animation ----------
+(function(){
+  function loadScript(src){
+    return new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function initParticleBackground(){
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const container = document.getElementById('particleBg');
+    if(!container) return;
+
+    try{
+      if(!window.p5) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js');
+      if(!window.gsap) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js');
+    }catch(err){
+      console.warn('Decorative particle background failed to load (page still works fine):', err);
+      return;
+    }
+
+    const sketch = (p)=>{
+      const particles = [];
+      const amount = (p.windowWidth < 600 || p.windowHeight < 600) ? 700 : 1400;
+      const durationShrink = 8;
+      const durationGrow = 8;
+      const total = durationShrink + durationGrow;
+      const theme = ['#c98a3e', '#6b8f71', '#2b2f3a', '#c98a3e', '#ece8e0'];
+
+      const proxy = { progress: 1, val: 0 };
+      let progress, interpolator;
+
+      class Particle{
+        constructor(i){
+          this.i = i;
+          this.cos = p.cos(i * p.TWO_PI);
+          this.sin = p.sin(i * p.TWO_PI);
+          this.r = p.floor(p.random(2, 6));
+          this.offset = p.pow(p.random(1, 2), 2.5) * p.random(-0.015, 0.015);
+          this.color = p.random(theme);
+        }
+        draw(){
+          interpolator.progress((proxy.progress + this.i) % 1);
+          const baseR = p.min(p.width, p.height);
+          const r = baseR * (0.35 + proxy.val * this.offset);
+          const x = this.cos * r + p.width / 2;
+          const y = this.sin * r + p.height / 2;
+          p.fill(this.color);
+          p.circle(x, y, this.r);
+        }
+      }
+
+      p.setup = ()=>{
+        const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
+        canvas.parent(container);
+        p.noStroke();
+
+        progress = gsap.to(proxy, { progress: 0, ease: 'none', duration: total, repeat: -1 });
+        interpolator = gsap.timeline({ paused: true, reverse: true })
+          .to(proxy, { val: 1, duration: durationShrink, ease: 'elastic.in(1.5, 0.15)' })
+          .to(proxy, { val: 0, duration: durationGrow, ease: 'back.in(3)' });
+
+        for(let i=0; i<amount; i++) particles.push(new Particle(i/amount));
+      };
+
+      p.windowResized = ()=>{
+        p.resizeCanvas(window.innerWidth, window.innerHeight);
+      };
+
+      const onMove = (x, y)=>{
+        let angle = p.atan2(y - p.height/2, x - p.width/2);
+        angle = angle < 0 ? angle + p.TWO_PI : angle;
+        angle = p.abs(angle / p.TWO_PI) * total;
+        progress.time(angle);
+      };
+      p.mouseMoved = ()=> onMove(p.mouseX, p.mouseY);
+      p.touchMoved = ()=>{
+        if(p.touches.length === 0) return;
+        onMove(p.touches[0].x, p.touches[0].y);
+      };
+
+      p.draw = ()=>{
+        p.clear();
+        particles.forEach(pt=>pt.draw());
+      };
+    };
+
+    new window.p5(sketch);
+  }
+
+  initParticleBackground();
+})();
+</script>
+</body>
+</html>
